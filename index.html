@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+
+    <!-- Título que aparece en la pestaña del navegador -->
+    <title>Razones de Cambio</title>
+
+    <style>
+        /* Estilo general de toda la página */
+        body {
+            font-family: Arial, sans-serif; /* Tipo de letra */
+            margin: 30px; /* Espacio alrededor de la página */
+            background-color: #f2f2f2; /* Color de fondo */
+        }
+
+        /* Centra los títulos principales */
+        h1, h2 {
+            text-align: center;
+        }
+
+        /* Caja principal donde se coloca todo el contenido */
+        .caja {
+            background: white; /* Fondo blanco */
+            padding: 20px; /* Espacio interno */
+            border: 1px solid #ccc; /* Borde gris */
+            max-width: 900px; /* Ancho máximo */
+            margin: auto; /* Centra la caja */
+        }
+
+        /* Caja donde aparece el enunciado del problema */
+        .problema {
+            background-color: #eeeeee; /* Fondo gris claro */
+            padding: 15px; /* Espacio interno */
+            border: 1px solid #ccc; /* Borde */
+            margin-bottom: 20px; /* Separación inferior */
+        }
+
+        /* Cada etiqueta aparece en una línea */
+        label {
+            display: block;
+            margin-top: 10px;
+        }
+
+        /* Estilo de los campos de entrada */
+        input {
+            padding: 6px;
+            width: 200px;
+        }
+
+        /* Estilo de los botones */
+        button {
+            margin-top: 15px;
+            padding: 8px 15px;
+            cursor: pointer;
+        }
+
+        /* Caja donde se muestran los resultados */
+        #resultado {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #e8e8e8;
+        }
+
+        /* Estilo para los canvas donde se dibuja el tanque y la gráfica */
+        canvas {
+            border: 1px solid black;
+            background: white;
+            margin-top: 20px;
+        }
+
+        /* Coloca el tanque y la gráfica uno al lado del otro */
+        .contenedorCanvas {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        /* Centra el botón de animar */
+        .botonAnimar {
+            text-align: center;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Caja principal del programa -->
+    <div class="caja">
+
+        <h1>Aplicación de la Derivada</h1>
+        <h2>Razones de cambio relacionadas</h2>
+
+        <!-- Sección donde se muestra el problema -->
+        <div class="problema">
+            <h3>Problema</h3>
+
+            <!-- Aquí JavaScript escribe automáticamente el problema según los datos ingresados -->
+            <p id="textoProblema"></p>
+
+            <p>
+                Se desea calcular qué tan rápido aumenta el volumen del agua,
+                es decir:
+            </p>
+
+            <p>
+                <b>dV/dt</b>
+            </p>
+        </div>
+
+        <h3>Datos</h3>
+
+        <!-- Entrada para el radio superior del tanque -->
+        <label>Radio superior del tanque R:</label>
+        <input type="number" id="radio" value="10"> cm
+
+        <!-- Entrada para la altura total del tanque -->
+        <label>Altura total del tanque H:</label>
+        <input type="number" id="alturaTotal" value="10"> cm
+
+        <!-- Entrada para la altura actual del agua -->
+        <label>Altura actual del agua h:</label>
+        <input type="number" id="alturaAgua" value="4"> cm
+
+        <!-- Entrada para la velocidad con la que sube el agua -->
+        <label>Velocidad dh/dt:</label>
+        <input type="number" id="velocidad" value="2"> cm/s
+
+        <br>
+
+        <!-- Botón para calcular manualmente -->
+        <button onclick="calcular(true)">Calcular</button>
+
+        <!-- Aquí se muestran los resultados del volumen y la derivada -->
+        <div id="resultado">
+            Aquí aparecerá el resultado.
+        </div>
+
+        <h3>Fórmula usada</h3>
+
+        <p>Volumen del cono:</p>
+
+        <p>
+            <b>V = (1/3)πr²h</b>
+        </p>
+
+        <p>
+            Como el radio cambia junto con la altura:
+        </p>
+
+        <p>
+            <b>r = (R/H)h</b>
+        </p>
+
+        <p>
+            Entonces:
+        </p>
+
+        <p>
+            <b>dV/dt = (πR²h² / H²)(dh/dt)</b>
+        </p>
+
+        <!-- Contenedor de los dibujos -->
+        <div class="contenedorCanvas">
+
+            <!-- Canvas donde se dibuja el tanque -->
+            <div>
+                <h3>Tanque</h3>
+                <canvas id="tanque" width="300" height="300"></canvas>
+            </div>
+
+            <!-- Canvas donde se dibuja la gráfica -->
+            <div>
+                <h3>Gráfica</h3>
+                <canvas id="grafica" width="350" height="300"></canvas>
+            </div>
+        </div>
+
+        <!-- Botón para iniciar la animación -->
+        <div class="botonAnimar">
+            <button onclick="animar()">Animar</button>
+        </div>
+
+    </div>
+
+    <script>
+        /*
+            Esta variable guarda el intervalo de la animación.
+            Sirve para detener una animación anterior antes de iniciar otra.
+        */
+        let intervalo;
+
+        /*
+            Esta variable guarda la altura del agua durante la animación.
+        */
+        let alturaAnimada = 0;
+
+        /*
+            Esta función obtiene los datos que el usuario escribió en los input.
+            parseFloat convierte los valores a números decimales.
+        */
+        function datos() {
+            let R = parseFloat(document.getElementById("radio").value); // Radio superior del tanque
+            let H = parseFloat(document.getElementById("alturaTotal").value); // Altura total del tanque
+            let h = parseFloat(document.getElementById("alturaAgua").value); // Altura actual del agua
+            let dhdt = parseFloat(document.getElementById("velocidad").value); // Velocidad con la que sube el agua
+
+            // Devuelve todos los datos para usarlos en otras funciones
+            return { R, H, h, dhdt };
+        }
+
+        /*
+            Esta función actualiza el texto del problema.
+            El enunciado cambia automáticamente según los datos ingresados.
+        */
+        function actualizarProblema() {
+            let { R, H, h, dhdt } = datos();
+
+            /*
+                Si algún dato no es número, se muestra un mensaje.
+            */
+            if (isNaN(R) || isNaN(H) || isNaN(h) || isNaN(dhdt)) {
+                document.getElementById("textoProblema").innerHTML =
+                    "Completa todos los datos para formar el problema.";
+                return;
+            }
+
+            /*
+                Se escribe el problema usando los valores actuales.
+            */
+            document.getElementById("textoProblema").innerHTML = `
+                Un tanque con forma de cono se está llenando con agua.
+                El tanque tiene un radio superior de <b>${R} cm</b>
+                y una altura total de <b>${H} cm</b>.
+                En cierto instante, el agua tiene una altura de <b>${h} cm</b>
+                y dicha altura aumenta a una velocidad de <b>${dhdt} cm/s</b>.
+            `;
+        }
+
+        /*
+            Esta función revisa si los datos ingresados son válidos.
+            Evita errores matemáticos y valores imposibles.
+        */
+        function validarDatos(R, H, h, dhdt, mostrarAlerta) {
+
+            /*
+                Verifica que todos los datos sean números.
+            */
+            if (isNaN(R) || isNaN(H) || isNaN(h) || isNaN(dhdt)) {
+                document.getElementById("resultado").innerHTML =
+                    "Ingresa todos los datos para calcular.";
+                return false;
+            }
+
+            /*
+                Validaciones importantes:
+                - El radio debe ser mayor que cero.
+                - La altura total debe ser mayor que cero.
+                - La altura del agua no puede ser negativa.
+                - La velocidad debe ser mayor que cero.
+                - La altura del agua no puede ser mayor que la altura total.
+            */
+            if (R <= 0 || H <= 0 || h < 0 || dhdt <= 0 || h > H) {
+
+                /*
+                    Solo muestra alerta cuando el usuario presiona el botón calcular
+                    o cuando intenta animar.
+                */
+                if (mostrarAlerta) {
+                    alert("Revisa los datos ingresados. La altura del agua no puede ser mayor que la altura total.");
+                }
+
+                document.getElementById("resultado").innerHTML =
+                    "Los datos no son válidos. Revisa el radio, la altura y la velocidad.";
+
+                /*
+                    Si los datos están mal, se limpian los dibujos.
+                */
+                limpiarCanvas();
+
+                return false;
+            }
+
+            return true;
+        }
+
+        /*
+            Esta función limpia el dibujo del tanque y la gráfica.
+            Se usa cuando los datos son incorrectos.
+        */
+        function limpiarCanvas() {
+
+            // Limpia el canvas del tanque
+            let canvasTanque = document.getElementById("tanque");
+            let ctxTanque = canvasTanque.getContext("2d");
+            ctxTanque.clearRect(0, 0, canvasTanque.width, canvasTanque.height);
+
+            // Limpia el canvas de la gráfica
+            let canvasGrafica = document.getElementById("grafica");
+            let ctxGrafica = canvasGrafica.getContext("2d");
+            ctxGrafica.clearRect(0, 0, canvasGrafica.width, canvasGrafica.height);
+        }
+
+        /*
+            Esta función realiza el cálculo principal del programa.
+            Calcula:
+            1. Volumen actual del agua.
+            2. Razón de cambio del volumen, es decir dV/dt.
+        */
+        function calcular(mostrarAlerta = true) {
+
+            /*
+                Se detiene cualquier animación anterior para evitar errores
+                si el usuario cambia los datos.
+            */
+            clearInterval(intervalo);
+
+            // Actualiza el problema con los valores escritos
+            actualizarProblema();
+
+            // Obtiene los datos actuales
+            let { R, H, h, dhdt } = datos();
+
+            // Si los datos no son válidos, se detiene la función
+            if (!validarDatos(R, H, h, dhdt, mostrarAlerta)) {
+                return;
+            }
+
+            /*
+                Cálculo del volumen actual del agua:
+
+                Fórmula:
+                V = (πR²h³) / (3H²)
+
+                Esta fórmula viene de:
+                V = (1/3)πr²h
+                y de la relación:
+                r = (R/H)h
+            */
+            let volumen = (Math.PI * R * R * Math.pow(h, 3)) / (3 * H * H);
+
+            /*
+                Cálculo de la derivada:
+
+                dV/dt = (πR²h² / H²)(dh/dt)
+
+                Esta es la parte más importante del proyecto,
+                porque indica qué tan rápido aumenta el volumen.
+            */
+            let cambioVolumen = (Math.PI * R * R * h * h * dhdt) / (H * H);
+
+            /*
+                Se muestran los resultados en la página.
+            */
+            document.getElementById("resultado").innerHTML = `
+                <h3>Resultado</h3>
+                <p>Volumen actual: <b>${volumen.toFixed(2)} cm³</b></p>
+                <p>Razón de cambio del volumen:</p>
+                <p><b>dV/dt = ${cambioVolumen.toFixed(2)} cm³/s</b></p>
+                <p>
+                    Esto significa que cuando el agua tiene una altura de ${h} cm,
+                    el volumen aumenta aproximadamente ${cambioVolumen.toFixed(2)} cm³ cada segundo.
+                </p>
+            `;
+
+            /*
+                Dibuja el tanque y la gráfica con los datos actuales.
+            */
+            dibujarTanque(h);
+            dibujarGrafica();
+        }
+
+        /*
+            Esta función dibuja el tanque cónico y el nivel del agua.
+        */
+        function dibujarTanque(h) {
+            let { H } = datos();
+
+            // Se obtiene el canvas del tanque
+            let canvas = document.getElementById("tanque");
+
+            // ctx permite dibujar dentro del canvas
+            let ctx = canvas.getContext("2d");
+
+            // Limpia el dibujo anterior
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            /*
+                Coordenadas principales del tanque.
+                xCentro: centro horizontal del tanque.
+                yArriba: parte superior del tanque.
+                yAbajo: punta inferior del cono.
+                ancho: ancho superior visual del tanque.
+            */
+            let xCentro = 150;
+            let yArriba = 40;
+            let yAbajo = 260;
+            let ancho = 180;
+
+            /*
+                Dibujo del tanque en forma de cono.
+            */
+            ctx.beginPath();
+            ctx.moveTo(xCentro - ancho / 2, yArriba); // Línea izquierda superior
+            ctx.lineTo(xCentro, yAbajo); // Línea hacia la punta
+            ctx.lineTo(xCentro + ancho / 2, yArriba); // Línea derecha superior
+            ctx.stroke(); // Dibuja las líneas
+
+            /*
+                Se calcula la proporción de agua respecto a la altura total.
+                Ejemplo:
+                Si h = 4 y H = 10, entonces proporcion = 0.4.
+            */
+            let proporcion = h / H;
+
+            /*
+                Calcula la posición vertical del nivel del agua.
+            */
+            let yAgua = yAbajo - (yAbajo - yArriba) * proporcion;
+
+            /*
+                En un cono, el ancho del agua cambia según la altura.
+                Por eso el ancho se multiplica por la proporción.
+            */
+            let anchoAgua = ancho * proporcion;
+
+            /*
+                Dibujo del agua.
+                Se forma un triángulo azul dentro del tanque.
+            */
+            ctx.beginPath();
+            ctx.moveTo(xCentro, yAbajo); // Punta inferior del agua
+            ctx.lineTo(xCentro - anchoAgua / 2, yAgua); // Lado izquierdo del agua
+            ctx.lineTo(xCentro + anchoAgua / 2, yAgua); // Lado derecho del agua
+            ctx.closePath();
+
+            ctx.fillStyle = "lightblue"; // Color del agua
+            ctx.fill(); // Rellena el agua
+
+            /*
+                Texto que muestra la altura actual del agua.
+            */
+            ctx.fillStyle = "black";
+            ctx.fillText("h = " + h.toFixed(1) + " cm", 110, 285);
+        }
+
+        /*
+            Esta función dibuja la gráfica.
+            Se dibujan dos curvas:
+            - Azul: volumen V(t)
+            - Roja: derivada dV/dt
+        */
+        function dibujarGrafica() {
+            let { R, H, h, dhdt } = datos();
+
+            // Se obtiene el canvas de la gráfica
+            let canvas = document.getElementById("grafica");
+
+            // ctx permite dibujar líneas y texto en la gráfica
+            let ctx = canvas.getContext("2d");
+
+            // Limpia la gráfica anterior
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            /*
+                Medidas básicas de la gráfica.
+            */
+            let margen = 45;
+            let ancho = 260;
+            let alto = 200;
+
+            /*
+                Dibujo de los ejes.
+                Eje Y: vertical.
+                Eje X: horizontal.
+            */
+            ctx.beginPath();
+            ctx.moveTo(margen, 20); // Parte superior del eje Y
+            ctx.lineTo(margen, 220); // Parte inferior del eje Y
+            ctx.lineTo(320, 220); // Eje X
+            ctx.stroke();
+
+            /*
+                Textos de los ejes.
+            */
+            ctx.fillStyle = "black";
+            ctx.fillText("Tiempo (s)", 145, 250);
+            ctx.fillText("Valores", 5, 25);
+
+            /*
+                Calcula el tiempo que falta aproximadamente
+                para que el tanque se llene.
+            */
+            let tiempoMax = (H - h) / dhdt;
+
+            /*
+                Si el tiempo da cero o negativo,
+                se usa un valor fijo para que no falle la gráfica.
+            */
+            if (tiempoMax <= 0) {
+                tiempoMax = 10;
+            }
+
+            /*
+                Arreglos donde se guardarán los puntos
+                de la curva azul y la curva roja.
+            */
+            let puntosVolumen = [];
+            let puntosDerivada = [];
+
+            /*
+                Este ciclo genera varios valores de tiempo.
+                Con esos valores se calcula el volumen y la derivada.
+            */
+            for (let t = 0; t <= tiempoMax; t += tiempoMax / 50) {
+
+                /*
+                    Altura del agua en el tiempo t.
+
+                    h(t) = h inicial + dh/dt * t
+                */
+                let altura = h + dhdt * t;
+
+                /*
+                    Evita que la altura pase de la altura total.
+                */
+                if (altura > H) {
+                    altura = H;
+                }
+
+                /*
+                    Volumen en el tiempo t.
+                    Estos puntos forman la línea azul.
+                */
+                let volumen = (Math.PI * R * R * Math.pow(altura, 3)) / (3 * H * H);
+
+                /*
+                    Derivada en el tiempo t.
+                    Estos puntos forman la línea roja.
+                */
+                let derivada = (Math.PI * R * R * altura * altura * dhdt) / (H * H);
+
+                /*
+                    Se guardan los puntos calculados.
+                */
+                puntosVolumen.push({ t: t, y: volumen });
+                puntosDerivada.push({ t: t, y: derivada });
+            }
+
+            /*
+                Se busca el valor más grande entre volumen y derivada.
+                Esto sirve para ajustar la escala de la gráfica.
+            */
+            let maxY = 0;
+
+            puntosVolumen.forEach(p => {
+                if (p.y > maxY) {
+                    maxY = p.y;
+                }
+            });
+
+            puntosDerivada.forEach(p => {
+                if (p.y > maxY) {
+                    maxY = p.y;
+                }
+            });
+
+            /*
+                Evita dividir entre cero.
+            */
+            if (maxY <= 0) {
+                maxY = 1;
+            }
+
+            /*
+                Esta función dibuja una curva.
+                Recibe:
+                - Los puntos calculados.
+                - El color de la línea.
+            */
+            function dibujarCurva(puntos, color) {
+                ctx.beginPath();
+                ctx.strokeStyle = color;
+
+                puntos.forEach((p, i) => {
+
+                    /*
+                        Convierte el tiempo y el valor calculado
+                        a posiciones dentro del canvas.
+                    */
+                    let x = margen + (p.t / tiempoMax) * ancho;
+                    let y = 220 - (p.y / maxY) * alto;
+
+                    /*
+                        El primer punto solo coloca el lápiz.
+                        Los demás puntos dibujan líneas.
+                    */
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                });
+
+                // Dibuja la curva
+                ctx.stroke();
+
+                // Regresa el color a negro para los textos
+                ctx.strokeStyle = "black";
+            }
+
+            /*
+                Dibuja la línea azul del volumen V(t).
+            */
+            dibujarCurva(puntosVolumen, "blue");
+
+            /*
+                Dibuja la línea roja de la derivada dV/dt.
+            */
+            dibujarCurva(puntosDerivada, "red");
+
+            /*
+                Leyenda de la gráfica.
+            */
+            ctx.fillStyle = "blue";
+            ctx.fillText("Azul: V(t)", 200, 45);
+
+            ctx.fillStyle = "red";
+            ctx.fillText("Rojo: dV/dt", 200, 65);
+
+            /*
+                Valores de referencia.
+            */
+            ctx.fillStyle = "black";
+            ctx.fillText("0", 30, 225);
+            ctx.fillText(maxY.toFixed(1), 8, 25);
+        }
+
+        /*
+            Esta función inicia la animación del agua subiendo.
+        */
+        function animar() {
+
+            /*
+                Limpia una animación anterior.
+            */
+            clearInterval(intervalo);
+
+            // Obtiene los datos actuales
+            let { R, H, h, dhdt } = datos();
+
+            // Actualiza el problema con los datos actuales
+            actualizarProblema();
+
+            // Si los datos están mal, no se anima
+            if (!validarDatos(R, H, h, dhdt, true)) {
+                return;
+            }
+
+            /*
+                La animación inicia desde la altura escrita por el usuario.
+            */
+            alturaAnimada = h;
+
+            /*
+                setInterval repite una acción cada cierto tiempo.
+                En este caso, cada 100 milisegundos aumenta la altura del agua.
+            */
+            intervalo = setInterval(function () {
+
+                /*
+                    Aumenta la altura del agua según la velocidad dh/dt.
+                */
+                alturaAnimada += dhdt * 0.1;
+
+                /*
+                    Si el agua llega a la altura total,
+                    la animación se detiene automáticamente.
+                */
+                if (alturaAnimada >= H) {
+                    alturaAnimada = H;
+                    clearInterval(intervalo);
+                }
+
+                /*
+                    Redibuja el tanque con la nueva altura.
+                */
+                dibujarTanque(alturaAnimada);
+
+            }, 100);
+        }
+
+        /*
+            Estas líneas hacen que el programa se actualice automáticamente
+            cuando el usuario cambia cualquier dato.
+        */
+        document.getElementById("radio").addEventListener("input", function () {
+            calcular(false);
+        });
+
+        document.getElementById("alturaTotal").addEventListener("input", function () {
+            calcular(false);
+        });
+
+        document.getElementById("alturaAgua").addEventListener("input", function () {
+            calcular(false);
+        });
+
+        document.getElementById("velocidad").addEventListener("input", function () {
+            calcular(false);
+        });
+
+        /*
+            Esta línea ejecuta el cálculo al cargar la página.
+            Así el programa ya aparece con resultado, tanque y gráfica.
+        */
+        calcular(false);
+    </script>
+
+</body>
+</html>
