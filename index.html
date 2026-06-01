@@ -62,6 +62,29 @@
             background-color: #e8e8e8;
         }
 
+        /* Estilo de la tabla de valores */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            background: white;
+        }
+
+        th, td {
+            border: 1px solid #999;
+            padding: 8px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #d9eaf7;
+        }
+
+        caption {
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
         /* Estilo para los canvas donde se dibuja el tanque y la gráfica */
         canvas {
             border: 1px solid black;
@@ -137,6 +160,25 @@
         <div id="resultado">
             Aquí aparecerá el resultado.
         </div>
+
+
+        <!-- Tabla donde se muestran varios valores del proceso -->
+        <h3>Tabla de valores</h3>
+
+        <table>
+            <caption>Valores del agua conforme pasa el tiempo</caption>
+            <thead>
+                <tr>
+                    <th>Tiempo (s)</th>
+                    <th>Altura h(t) (cm)</th>
+                    <th>Volumen V(t) (cm³)</th>
+                    <th>Razón dV/dt (cm³/s)</th>
+                </tr>
+            </thead>
+            <tbody id="tablaValores">
+                <!-- JavaScript llenará esta tabla automáticamente -->
+            </tbody>
+        </table>
 
         <h3>Fórmula usada</h3>
 
@@ -280,6 +322,9 @@
                 */
                 limpiarCanvas();
 
+                // También se limpia la tabla para no mostrar resultados incorrectos.
+                document.getElementById("tablaValores").innerHTML = "";
+
                 return false;
             }
 
@@ -368,8 +413,89 @@
             /*
                 Dibuja el tanque y la gráfica con los datos actuales.
             */
+            llenarTabla();
             dibujarTanque(h);
             dibujarGrafica();
+        }
+
+
+        /*
+            Esta función llena la tabla con varios valores del proceso.
+            Muestra cómo cambian la altura, el volumen y la derivada
+            conforme pasa el tiempo.
+        */
+        function llenarTabla() {
+            let { R, H, h, dhdt } = datos();
+
+            // Se obtiene el cuerpo de la tabla.
+            let tabla = document.getElementById("tablaValores");
+
+            // Limpia datos anteriores.
+            tabla.innerHTML = "";
+
+            /*
+                Calcula el tiempo aproximado que falta para llenar el tanque:
+                tiempo = (altura total - altura actual) / velocidad
+            */
+            let tiempoMax = (H - h) / dhdt;
+
+            /*
+                Si el tanque ya está lleno, se muestra solamente el instante actual.
+            */
+            if (tiempoMax <= 0) {
+                tiempoMax = 0;
+            }
+
+            /*
+                Se generan 6 filas para observar el comportamiento del tanque.
+                Cada fila representa un momento distinto.
+            */
+            let cantidadFilas = 6;
+
+            for (let i = 0; i < cantidadFilas; i++) {
+
+                /*
+                    Cuando tiempoMax es 0, todas las filas quedan en t = 0.
+                    Si no, se divide el tiempo en partes iguales.
+                */
+                let t = tiempoMax === 0 ? 0 : (tiempoMax / (cantidadFilas - 1)) * i;
+
+                /*
+                    Altura del agua en ese tiempo:
+                    h(t) = h inicial + dh/dt * t
+                */
+                let altura = h + dhdt * t;
+
+                // Evita que la altura sea mayor que la altura total del tanque.
+                if (altura > H) {
+                    altura = H;
+                }
+
+                /*
+                    Volumen del agua en ese instante.
+                */
+                let volumen = (Math.PI * R * R * Math.pow(altura, 3)) / (3 * H * H);
+
+                /*
+                    Razón de cambio del volumen en ese instante.
+                */
+                let cambioVolumen = (Math.PI * R * R * altura * altura * dhdt) / (H * H);
+
+                /*
+                    Se crea una fila nueva para la tabla.
+                */
+                let fila = `
+                    <tr>
+                        <td>${t.toFixed(2)}</td>
+                        <td>${altura.toFixed(2)}</td>
+                        <td>${volumen.toFixed(2)}</td>
+                        <td>${cambioVolumen.toFixed(2)}</td>
+                    </tr>
+                `;
+
+                // Se agrega la fila a la tabla.
+                tabla.innerHTML += fila;
+            }
         }
 
         /*
